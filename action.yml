@@ -1,0 +1,15 @@
+name: "testflight-feedback"
+author: "Lukas Ruzicka"
+description: "Fetches user feedback from TestFlight and creates GitHub Issues out of it."
+branding:
+  icon: "user-check"
+  color: "purple"
+
+inputs:
+  clearScreenshotsOnly:
+    description: "Clears old screenshots from the repository (for issues closed 30+ days ago)"
+    required: false
+
+runs:
+  using: node12
+  main: action.js
