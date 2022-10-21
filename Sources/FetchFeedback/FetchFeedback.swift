@@ -10,8 +10,8 @@ public func runScript() {
             print("Successfully fetched \(newFeedbacks.count) new feedback \(newFeedbacks.count > 0 ? "🤩" : "😭")", color: .green, bold: true)
             if !newFeedbacks.isEmpty {
                 let githubRepo = try await GitHubRepository()
-                
-                for feedback in newFeedbacks {
+
+                for feedback in newFeedbacks.reversed() {
                     try await githubRepo.setupIssue(feedback: feedback)
                 }
             }
