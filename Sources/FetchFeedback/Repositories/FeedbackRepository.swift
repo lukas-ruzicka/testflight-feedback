@@ -38,7 +38,7 @@ private extension FeedbackRepository {
 
     static func decodeFeedbacks(_ data: Data) throws -> FeedbackResponseModel {
         do {
-            return try JSONDecoder.decoder.decode(FeedbackResponseModel.self, from: data)
+            return try jsonDecoder.decode(FeedbackResponseModel.self, from: data)
         } catch {
             if let decodedError = try? JSONDecoder.decoder.decode(AppStoreConnectAPIErrorResponseModel.self, from: data).errors.first {
                 throw AppStoreConnectAPIError(from: decodedError)
@@ -122,6 +122,45 @@ private extension FeedbackRepository {
     static func baseIrisURL() throws -> URL {
         URL(string: "https://appstoreconnect.apple.com/iris/provider/\(try Environment.issuerId.value())/v1")!
     }
+}
+
+private extension FeedbackRepository {
+    
+    static let iso8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    static let iso8601WithFractionalSecondsFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    static let jsonDecoder: JSONDecoder = {
+        // Datafeed contains dates formatted accordingly to ISO8601 format.
+        // However, some dates representation have fractional seconds and some don't.
+        // Vanilla ISO8601DateFormatter cannot parse both subformats, therefore we're trying to
+        // parse a date using one subformat and, if it fails, with another one.
+        let decoder = JSONDecoder.decoder
+        decoder.dateDecodingStrategy = .custom({ decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime]
+            if let date = iso8601Formatter.date(from: dateString) {
+                return date
+            } else if let date = iso8601WithFractionalSecondsFormatter.date(from: dateString) {
+                return date
+            }
+
+            throw DecodingError.dataCorruptedError(in: container,
+                                                   debugDescription: "Cannot decode date string \(dateString)")
+        })
+        return decoder
+    }()
 }
 
 private extension URLRequest {
